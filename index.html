@@ -1,13 +1,157 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>news</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InfoSpread - Simulation de propagation d'information</title>
+  <link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+  <header>
+    <h1><span>🧠</span> InfoSpread</h1>
+    <div class="header-info">
+      <div class="time-display" id="stat-time">00:00</div>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Canvas principal -->
+    <div class="canvas-wrapper">
+      <canvas id="canvas"></canvas>
+      
+      <!-- Instructions -->
+      <div class="instructions" id="instructions">
+        <h2>👆 Cliquez sur un agent</h2>
+        <p>pour propager une information</p>
+      </div>
+      
+      <!-- Bannière d'événement -->
+      <div class="event-banner hidden" id="event-banner">
+        <div class="event-name" id="event-name">📰 Événement</div>
+        <div class="event-desc" id="event-desc">Description de l'événement</div>
+        <div class="event-timer" id="event-timer"></div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <!-- Stats -->
+      <div class="card">
+        <h3>📊 Statistiques</h3>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-label">Ignorants</span>
+            <span class="stat-value ignorant" id="stat-ignorant">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Informés</span>
+            <span class="stat-value informed" id="stat-informed">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Diffuseurs</span>
+            <span class="stat-value spreading" id="stat-spreading">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Saturés</span>
+            <span class="stat-value saturated" id="stat-saturated">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">% Touchés</span>
+            <span class="stat-value" id="stat-percent">0%</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Vitesse</span>
+            <span class="stat-value" id="stat-rate">0/s</span>
+          </div>
+        </div>
+        
+        <!-- Barre de progression -->
+        <div class="progress-bar">
+          <div class="segment ignorant" id="bar-ignorant" style="width: 100%"></div>
+          <div class="segment informed" id="bar-informed" style="width: 0%"></div>
+          <div class="segment spreading" id="bar-spreading" style="width: 0%"></div>
+          <div class="segment saturated" id="bar-saturated" style="width: 0%"></div>
+        </div>
+        
+        <!-- Température de l'info -->
+        <div class="heat-display">
+          <span class="stat-label">🌡️ Température</span>
+          <div class="heat-bar">
+            <div class="heat-fill" id="heat-fill" style="width: 0%"></div>
+          </div>
+          <span class="heat-value" id="stat-heat">0%</span>
+        </div>
+      </div>
+
+      <!-- Personnalités -->
+      <div class="card">
+        <h3>🎭 Personnalités</h3>
+        <div class="personality-legend">
+          <div class="legend-item" id="legend-receptive">
+            <div class="legend-dot receptive"></div>
+            <span class="legend-text">Réceptif</span>
+            <span class="count">0</span>
+          </div>
+          <div class="legend-item" id="legend-skeptic">
+            <div class="legend-dot skeptic"></div>
+            <span class="legend-text">Sceptique</span>
+            <span class="count">0</span>
+          </div>
+          <div class="legend-item" id="legend-social">
+            <div class="legend-dot social"></div>
+            <span class="legend-text">Bavard</span>
+            <span class="count">0</span>
+          </div>
+          <div class="legend-item" id="legend-introvert">
+            <div class="legend-dot introvert"></div>
+            <span class="legend-text">Introverti</span>
+            <span class="count">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contrôles -->
+      <div class="card">
+        <h3>⚙️ Paramètres</h3>
+        <div class="controls">
+          <div class="control-group">
+            <div class="control-header">
+              <span class="control-label">Viralité</span>
+              <span class="control-value" id="value-virality">50%</span>
+            </div>
+            <input type="range" id="slider-virality" min="0.1" max="1" step="0.05" value="0.5">
+          </div>
+          
+          <div class="control-group">
+            <div class="control-header">
+              <span class="control-label">Population</span>
+              <span class="control-value" id="value-population">80</span>
+            </div>
+            <input type="range" id="slider-population" min="20" max="150" step="5" value="80">
+          </div>
+          
+          <div class="control-group">
+            <div class="control-header">
+              <span class="control-label">Portée</span>
+              <span class="control-value" id="value-range">65px</span>
+            </div>
+            <input type="range" id="slider-range" min="30" max="120" step="5" value="65">
+          </div>
+          
+          <div class="buttons">
+            <button class="btn-secondary" id="btn-reset">🔄 Reset</button>
+            <button class="btn-primary" id="btn-play-pause">▶️ Lancer</button>
+            <button class="btn-secondary btn-small" id="btn-speed">1x</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>InfoSpread v2 — Simulation de propagation d'information avec personnalités et événements</p>
+  </footer>
+
+  <script type="module" src="src/main.js"></script>
+</body>
 </html>
