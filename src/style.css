@@ -159,15 +159,15 @@ h1 span { font-size: 1.3rem; }
 .panel {
   background: var(--bg-panel);
   border-radius: 10px;
-  padding: 10px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
-.panel-left { width: 180px; }
-.panel-right { width: 160px; }
+.panel-left { width: 220px; }
+.panel-right { width: 220px; }
 
 .panel-section {
   display: flex;
@@ -197,14 +197,16 @@ h1 span { font-size: 1.3rem; }
 /* Parameters */
 .param-row {
   display: grid;
-  grid-template-columns: 55px 1fr 35px;
+  grid-template-columns: 60px 1fr 38px;
   align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
+  gap: 8px;
+  font-size: 0.8rem;
+  padding: 2px 0;
 }
 
 .param-row label {
   color: var(--text-dim);
+  white-space: nowrap;
 }
 
 .param-row input[type="range"] {
@@ -233,16 +235,25 @@ h1 span { font-size: 1.3rem; }
 /* Personalities compact */
 .personality-compact {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   justify-content: center;
+  padding: 4px 0;
 }
 
 .pers-item {
   display: flex;
   align-items: center;
-  gap: 2px;
-  font-size: 0.8rem;
+  gap: 3px;
+  font-size: 0.85rem;
   cursor: help;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+  position: relative;
+}
+
+.pers-item:hover {
+  background: var(--bg-section);
 }
 
 .pers-item.receptive { color: var(--receptive); }
@@ -385,18 +396,24 @@ h1 span { font-size: 1.3rem; }
 .states-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
+  gap: 6px;
 }
 
 .state-item {
   background: var(--bg-section);
-  padding: 6px;
-  border-radius: 4px;
+  padding: 8px;
+  border-radius: 6px;
   text-align: center;
+  cursor: help;
+  transition: background 0.15s;
+}
+
+.state-item:hover {
+  background: var(--bg);
 }
 
 .state-value {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 700;
   display: block;
 }
@@ -433,18 +450,23 @@ h1 span { font-size: 1.3rem; }
 /* Indicators */
 .indicator {
   display: grid;
-  grid-template-columns: 60px 1fr 30px;
+  grid-template-columns: 95px 1fr 32px;
   align-items: center;
-  gap: 4px;
-  font-size: 0.7rem;
+  gap: 6px;
+  font-size: 0.75rem;
+  padding: 4px 0;
 }
 
-.ind-label { color: var(--text-dim); }
+.ind-label { 
+  color: var(--text-dim);
+  white-space: nowrap;
+  cursor: help;
+}
 
 .ind-bar {
-  height: 6px;
+  height: 8px;
   background: var(--bg);
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
 }
 
@@ -713,6 +735,47 @@ h1 span { font-size: 1.3rem; }
   text-align: center;
 }
 
+/* Tooltips */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  transform: translateY(-50%);
+  margin-right: 10px;
+  background: rgba(0, 0, 0, 0.95);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  border: 1px solid var(--accent);
+  width: 220px;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.5;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+/* Tooltip vers la droite pour le panneau gauche */
+.panel-left [data-tooltip]::after {
+  right: auto;
+  left: 100%;
+  margin-right: 0;
+  margin-left: 10px;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -727,30 +790,17 @@ h1 span { font-size: 1.3rem; }
   border-radius: 3px;
 }
 
-/* Responsive */
+/* Responsive - garder la structure fixe */
 @media (max-width: 900px) {
   .panel-left, .panel-right {
-    width: 140px;
+    width: 180px;
   }
   
   .param-row {
-    grid-template-columns: 45px 1fr 30px;
-  }
-}
-
-@media (max-width: 700px) {
-  .main-content {
-    flex-direction: column;
+    grid-template-columns: 50px 1fr 35px;
   }
   
-  .panel {
-    width: 100% !important;
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-  
-  .panel-section {
-    flex: 1;
-    min-width: 140px;
+  .indicator {
+    grid-template-columns: 65px 1fr 30px;
   }
 }

@@ -76,10 +76,10 @@
         <div class="panel-section">
           <label class="section-label">🎭 Population</label>
           <div class="personality-compact">
-            <span class="pers-item receptive" title="Réceptifs">●<span id="count-receptive">0</span></span>
-            <span class="pers-item skeptic" title="Sceptiques">●<span id="count-skeptic">0</span></span>
-            <span class="pers-item social" title="Bavards">●<span id="count-social">0</span></span>
-            <span class="pers-item introvert" title="Introvertis">●<span id="count-introvert">0</span></span>
+            <span class="pers-item receptive" data-tooltip="Réceptifs : acceptent facilement les infos, peu sceptiques">●<span id="count-receptive">0</span></span>
+            <span class="pers-item skeptic" data-tooltip="Sceptiques : difficiles à convaincre, détectent les fake news">●<span id="count-skeptic">0</span></span>
+            <span class="pers-item social" data-tooltip="Bavards : diffusent beaucoup, grande portée sociale">●<span id="count-social">0</span></span>
+            <span class="pers-item introvert" data-tooltip="Introvertis : diffusent peu même s'ils savent">●<span id="count-introvert">0</span></span>
           </div>
         </div>
 
@@ -132,19 +132,19 @@
         <div class="panel-section">
           <label class="section-label">📊 États</label>
           <div class="states-grid">
-            <div class="state-item">
+            <div class="state-item" data-tooltip="Agents qui n'ont pas encore reçu l'information">
               <span class="state-value ignorant" id="stat-ignorant">0</span>
               <span class="state-label">Ignorants</span>
             </div>
-            <div class="state-item">
+            <div class="state-item" data-tooltip="Agents qui ont reçu l'info mais ne la diffusent pas encore">
               <span class="state-value informed" id="stat-informed">0</span>
               <span class="state-label">Informés</span>
             </div>
-            <div class="state-item">
+            <div class="state-item" data-tooltip="Agents qui diffusent activement l'information autour d'eux">
               <span class="state-value spreading" id="stat-spreading">0</span>
               <span class="state-label">Diffuseurs</span>
             </div>
-            <div class="state-item">
+            <div class="state-item" data-tooltip="Agents lassés qui ne diffusent plus (ont oublié ou s'en désintéressent)">
               <span class="state-value saturated" id="stat-saturated">0</span>
               <span class="state-label">Saturés</span>
             </div>
@@ -160,23 +160,23 @@
         <!-- Indicateurs -->
         <div class="panel-section">
           <label class="section-label">🔬 Indicateurs</label>
-          <div class="indicator">
+          <div class="indicator" data-tooltip="Niveau d'intérêt pour l'info. Diminue avec le temps, les événements peuvent la relancer.">
             <span class="ind-label">🌡️ Chaleur</span>
             <div class="ind-bar"><div class="ind-fill heat" id="heat-fill"></div></div>
             <span class="ind-value" id="stat-heat">0%</span>
           </div>
-          <div class="indicator">
+          <div class="indicator" data-tooltip="Niveau de véracité de l'information. Les sceptiques détectent mieux les fausses infos.">
             <span class="ind-label">✅ Vérité</span>
             <div class="ind-bar"><div class="ind-fill truth" id="truth-fill"></div></div>
             <span class="ind-value" id="stat-truth">50%</span>
           </div>
-          <div class="indicator">
-            <span class="ind-label">🔀 Déform.</span>
+          <div class="indicator" data-tooltip="Niveau de déformation de l'info en circulant. Une info déformée est plus virale mais moins crédible.">
+            <span class="ind-label">🔀 Déformation</span>
             <div class="ind-bar"><div class="ind-fill distortion" id="distortion-fill"></div></div>
             <span class="ind-value" id="stat-distortion">0%</span>
           </div>
-          <div class="indicator">
-            <span class="ind-label">💪 Convict.</span>
+          <div class="indicator" data-tooltip="Niveau moyen de conviction des agents informés. Plus c'est haut, plus ils diffusent activement.">
+            <span class="ind-label">💪 Conviction</span>
             <div class="ind-bar"><div class="ind-fill conviction" id="conviction-fill"></div></div>
             <span class="ind-value" id="stat-conviction">0%</span>
           </div>
@@ -184,7 +184,7 @@
 
         <!-- Groupes -->
         <div class="panel-section">
-          <label class="section-label">🌐 Groupes</label>
+          <label class="section-label" data-tooltip="Pourcentage d'agents touchés dans chaque groupe social. L'info circule plus facilement dans un même groupe.">🌐 Groupes</label>
           <div class="groups-row">
             <span class="group-stat ga" id="group-a">A: 0%</span>
             <span class="group-stat gb" id="group-b">B: 0%</span>

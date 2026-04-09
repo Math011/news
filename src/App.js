@@ -187,10 +187,17 @@ export class App {
   }
 
   checkStabilization() {
-    const current = this.simulation.stats.percentReached;
+    const stats = this.simulation.stats;
+    const current = stats.percentReached;
     
-    // Si le pourcentage n'a pas bougé
-    if (Math.abs(current - this.lastPercentReached) < 1) {
+    // Conditions pour considérer la simulation comme stabilisée :
+    // 1. Plus aucun diffuseur actif OU
+    // 2. Le pourcentage n'a pas bougé depuis longtemps
+    
+    const noActiveSpreaders = stats.spreading === 0 && stats.informed === 0;
+    const percentStable = Math.abs(current - this.lastPercentReached) < 0.5;
+    
+    if (noActiveSpreaders || percentStable) {
       this.stabilizationCounter++;
     } else {
       this.stabilizationCounter = 0;
@@ -198,8 +205,16 @@ export class App {
     
     this.lastPercentReached = current;
     
-    // 5 secondes de stabilisation = afficher résultats
-    if (this.stabilizationCounter > 300 && !this.hasShownResults && this.hasStarted) {
+    // Conditions pour afficher les résultats :
+    // - Au moins 8 secondes de stabilisation (480 frames) OU
+    // - Plus de diffuseurs depuis 3 secondes (180 frames) ET au moins 5 secondes écoulées
+    const minTime = 300; // 5 secondes minimum d'expérience
+    const stabilizationTime = noActiveSpreaders ? 180 : 480;
+    
+    if (this.stabilizationCounter > stabilizationTime && 
+        !this.hasShownResults && 
+        this.hasStarted &&
+        this.simulation.time > minTime) {
       this.showResults();
     }
   }
