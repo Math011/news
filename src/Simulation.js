@@ -464,47 +464,66 @@ export class Simulation {
     // Base plus élevée
     let probability = CONFIG.BASE_TRANSMISSION_CHANCE * 1.5;
     
-    // Viralité de l'info (peut être boostée par déformation)
-    const effectiveVirality = this.info.virality * (1 + (spreader.infoDistortion || 0) * 0.3);
+    // === DÉFORMATION = VIRALITÉ BOOSTÉE ===
+    const distortion = spreader.infoDistortion || 0;
+    let effectiveVirality = this.info.virality;
+    
+    // Info déformée = plus virale (sensationnalisme)
+    if (distortion > 0.3) {
+      effectiveVirality *= (1 + distortion * 0.5); // Jusqu'à +50% viralité
+    }
     probability *= (0.5 + effectiveVirality);
     
-    // Température de l'info (info froide = moins de transmission)
+    // Température de l'info
     probability *= (0.3 + this.info.heat * 0.7);
     
-    // Distance (plus proche = beaucoup plus probable)
+    // Distance
     const distanceFactor = Math.pow(1 - (distance / effectiveRange), 1.5);
     probability *= distanceFactor;
     
-    // Réceptivité de la cible (TRÈS important)
+    // Réceptivité de la cible
     probability *= (0.2 + target.receptivity * 0.8);
     
-    // Scepticisme + détection de fake news
+    // === SCEPTICISME + DÉTECTION DE DÉFORMATION ===
     let skepticismFactor = 1 - target.skepticism * 0.8;
+    
+    // Les sceptiques détectent les fake news
     if (target.personality === 'skeptic' && this.info.truth < 0.5) {
-      // Les sceptiques bloquent mieux les fake news
       skepticismFactor *= (0.3 + this.info.truth * 0.7);
+    }
+    
+    // Les sceptiques détectent aussi la déformation
+    if (target.personality === 'skeptic' && distortion > 0.4) {
+      skepticismFactor *= (1 - distortion * 0.5);
     }
     probability *= skepticismFactor;
     
-    // Puissance de transmission (inclut socialness, crédibilité, conviction)
-    probability *= (0.3 + transmissionPower * 0.7);
+    // === CRÉDIBILITÉ RÉDUITE PAR DÉFORMATION ===
+    let effectiveCredibility = spreader.credibility;
+    if (distortion > 0.3) {
+      effectiveCredibility *= (1 - distortion * 0.4); // Jusqu'à -40% crédibilité
+    }
     
-    // Bonus même groupe (utilise les paramètres modifiables)
+    // Puissance de transmission avec crédibilité ajustée
+    const adjustedPower = transmissionPower * (0.5 + effectiveCredibility * 0.5);
+    probability *= (0.3 + adjustedPower * 0.7);
+    
+    // Bonus même groupe
     if (spreader.isSameGroup(target)) {
       probability *= this.sameGroupBonus;
     } else {
       probability *= this.diffGroupPenalty;
     }
     
-    // Bonus si déjà exposé (répétition)
+    // Bonus répétition
     if (target.exposures > 0) {
       probability *= (1 + target.exposures * 0.5);
     }
     
-    // Événement actif
+    // Événement
     probability *= eventMultiplier;
     
-    return Math.min(probability, 0.95); // Cap à 95%
+    return Math.min(probability, 0.95);
   }
 
   /**
@@ -687,5 +706,99 @@ export class Simulation {
     }
     
     return counts;
+  }
+
+  /**
+   * Générer une conclusion automatique basée sur les résultats
+   */
+  generateConclusion() {
+    const stats = this.stats;
+    const results = this.experimentResults;
+    const conclusions = [];
+    let mainConclusion = '';
+    
+    // Analyse de la propagation
+    if (stats.percentReached >= 80) {
+      conclusions.push('📈 Propagation massive : l\'info a touché presque toute la population');
+      mainConclusion = 'virale';
+    } else if (stats.percentReached >= 50) {
+      conclusions.push('📊 Propagation modérée : environ la moitié de la population touchée');
+      mainConclusion = 'modérée';
+    } else if (stats.percentReached >= 25) {
+      conclusions.push('📉 Propagation limitée : l\'info n\'a pas réussi à se diffuser largement');
+      mainConclusion = 'limitée';
+    } else {
+      conclusions.push('🛑 Propagation bloquée : l\'info n\'a presque pas circulé');
+      mainConclusion = 'bloquée';
+    }
+    
+    // Analyse de la vitesse
+    if (results.timeTo50Percent) {
+      const seconds = Math.round(results.timeTo50Percent / 60);
+      if (seconds < 15) {
+        conclusions.push(`⚡ Vitesse explosive : 50% atteint en ${seconds}s`);
+      } else if (seconds < 30) {
+        conclusions.push(`🏃 Vitesse rapide : 50% atteint en ${seconds}s`);
+      } else {
+        conclusions.push(`🐢 Vitesse lente : 50% atteint en ${seconds}s`);
+      }
+    }
+    
+    // Analyse de la déformation
+    if (stats.infoDistortion >= 50) {
+      conclusions.push('🔀 Forte déformation : l\'info s\'est beaucoup transformée en circulant');
+    } else if (stats.infoDistortion >= 25) {
+      conclusions.push('🔀 Déformation modérée : l\'info a subi quelques modifications');
+    }
+    
+    // Analyse vérité vs fake
+    if (this.info) {
+      if (this.info.truth < 0.3) {
+        if (stats.percentReached >= 50) {
+          conclusions.push('⚠️ Fake news efficace : une info peu fiable a largement circulé');
+        } else {
+          conclusions.push('✅ Fake news bloquée : les sceptiques ont freiné la désinformation');
+        }
+      } else if (this.info.truth > 0.7) {
+        if (stats.percentReached >= 50) {
+          conclusions.push('✅ Vérité propagée : une info fiable s\'est bien diffusée');
+        } else {
+          conclusions.push('😔 Vérité ignorée : une info fiable n\'a pas réussi à se propager');
+        }
+      }
+    }
+    
+    // Analyse des groupes
+    const groupDiff = Math.max(...stats.groupPenetration) - Math.min(...stats.groupPenetration);
+    if (groupDiff >= 40) {
+      conclusions.push('🫧 Effet bulle fort : grande différence de pénétration entre les groupes');
+    } else if (groupDiff <= 10 && stats.percentReached >= 30) {
+      conclusions.push('🌐 Diffusion homogène : tous les groupes touchés de façon similaire');
+    }
+    
+    // Conclusion principale formatée
+    let summary = '';
+    switch (mainConclusion) {
+      case 'virale':
+        summary = this.info && this.info.truth < 0.5 
+          ? 'Une info peu fiable mais virale peut toucher massivement une population.'
+          : 'Les conditions étaient favorables à une propagation massive.';
+        break;
+      case 'modérée':
+        summary = 'La propagation a atteint un équilibre entre diffuseurs et résistances.';
+        break;
+      case 'limitée':
+        summary = 'Des facteurs (scepticisme, bulles sociales, faible viralité) ont limité la diffusion.';
+        break;
+      case 'bloquée':
+        summary = 'La population a résisté à cette information, probablement grâce aux sceptiques.';
+        break;
+    }
+    
+    return {
+      bullets: conclusions,
+      summary,
+      mainConclusion,
+    };
   }
 }
