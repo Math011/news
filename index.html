@@ -3,13 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>InfoSpread - Simulation de propagation d'information</title>
+  <title>InfoSpread - Laboratoire de propagation d'information</title>
   <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
   <header>
-    <h1><span>🧠</span> InfoSpread</h1>
+    <h1><span>🧪</span> InfoSpread Lab</h1>
     <div class="header-info">
+      <div class="experiment-badge hidden" id="experiment-badge">
+        <span class="experiment-name" id="experiment-name">Mode Libre</span>
+      </div>
       <div class="time-display" id="stat-time">00:00</div>
     </div>
   </header>
@@ -31,10 +34,30 @@
         <div class="event-desc" id="event-desc">Description de l'événement</div>
         <div class="event-timer" id="event-timer"></div>
       </div>
+      
+      <!-- Question scientifique (pour les expériences) -->
+      <div class="science-question hidden" id="science-question">
+        <span class="question-icon">🔬</span>
+        <span class="question-text" id="question-text">Question de recherche</span>
+      </div>
     </div>
 
     <!-- Sidebar -->
     <div class="sidebar">
+      <!-- Sélecteur d'expérience -->
+      <div class="card experiment-card">
+        <h3>🧪 Expérience</h3>
+        <select id="experiment-select" class="experiment-select">
+          <option value="freeplay">🎮 Mode Libre</option>
+          <option value="viral">🔥 Viralité explosive</option>
+          <option value="skeptics">🧐 Société sceptique</option>
+          <option value="bubbles">🫧 Bulles sociales</option>
+          <option value="influencer">🎤 Pouvoir des influenceurs</option>
+          <option value="truth">✅ Vérité vs Fake News</option>
+        </select>
+        <p class="experiment-desc" id="experiment-desc">Explorez librement la propagation</p>
+      </div>
+
       <!-- Stats -->
       <div class="card">
         <h3>📊 Statistiques</h3>
@@ -72,14 +95,55 @@
           <div class="segment spreading" id="bar-spreading" style="width: 0%"></div>
           <div class="segment saturated" id="bar-saturated" style="width: 0%"></div>
         </div>
-        
-        <!-- Température de l'info -->
-        <div class="heat-display">
-          <span class="stat-label">🌡️ Température</span>
-          <div class="heat-bar">
-            <div class="heat-fill" id="heat-fill" style="width: 0%"></div>
+      </div>
+
+      <!-- Indicateurs scientifiques -->
+      <div class="card">
+        <h3>🔬 Indicateurs</h3>
+        <div class="indicators">
+          <!-- Température -->
+          <div class="indicator-row">
+            <span class="indicator-label">🌡️ Température</span>
+            <div class="indicator-bar">
+              <div class="indicator-fill heat-fill" id="heat-fill" style="width: 0%"></div>
+            </div>
+            <span class="indicator-value" id="stat-heat">0%</span>
           </div>
-          <span class="heat-value" id="stat-heat">0%</span>
+          
+          <!-- Vérité -->
+          <div class="indicator-row">
+            <span class="indicator-label">✅ Vérité</span>
+            <div class="indicator-bar truth-bar">
+              <div class="indicator-fill truth-fill" id="truth-fill" style="width: 50%"></div>
+            </div>
+            <span class="indicator-value" id="stat-truth">50%</span>
+          </div>
+          
+          <!-- Déformation -->
+          <div class="indicator-row">
+            <span class="indicator-label">🔀 Déformation</span>
+            <div class="indicator-bar distortion-bar">
+              <div class="indicator-fill distortion-fill" id="distortion-fill" style="width: 0%"></div>
+            </div>
+            <span class="indicator-value" id="stat-distortion">0%</span>
+          </div>
+          
+          <!-- Conviction moyenne -->
+          <div class="indicator-row">
+            <span class="indicator-label">💪 Conviction</span>
+            <div class="indicator-bar conviction-bar">
+              <div class="indicator-fill conviction-fill" id="conviction-fill" style="width: 0%"></div>
+            </div>
+            <span class="indicator-value" id="stat-conviction">0%</span>
+          </div>
+        </div>
+        
+        <!-- Pénétration par groupe -->
+        <div class="group-penetration" id="group-penetration">
+          <span class="indicator-label">Groupes :</span>
+          <span class="group-stat group-a" id="group-a">A: 0%</span>
+          <span class="group-stat group-b" id="group-b">B: 0%</span>
+          <span class="group-stat group-c" id="group-c">C: 0%</span>
         </div>
       </div>
 
@@ -124,10 +188,18 @@
           
           <div class="control-group">
             <div class="control-header">
+              <span class="control-label">Vérité de l'info</span>
+              <span class="control-value" id="value-truth">50%</span>
+            </div>
+            <input type="range" id="slider-truth" min="0" max="1" step="0.1" value="0.5">
+          </div>
+          
+          <div class="control-group">
+            <div class="control-header">
               <span class="control-label">Population</span>
               <span class="control-value" id="value-population">80</span>
             </div>
-            <input type="range" id="slider-population" min="20" max="150" step="5" value="80">
+            <input type="range" id="slider-population" min="30" max="150" step="5" value="80">
           </div>
           
           <div class="control-group">
@@ -147,9 +219,20 @@
       </div>
     </div>
   </div>
+  
+  <!-- Panneau de résultats (apparaît quand la propagation se stabilise) -->
+  <div class="results-panel hidden" id="results-panel">
+    <div class="results-content">
+      <h2>📊 Résultats de l'expérience</h2>
+      <div class="results-grid" id="results-grid">
+        <!-- Rempli dynamiquement -->
+      </div>
+      <button class="btn-primary" id="btn-close-results">Fermer</button>
+    </div>
+  </div>
 
   <footer>
-    <p>InfoSpread v2 — Simulation de propagation d'information avec personnalités et événements</p>
+    <p>InfoSpread Lab v3 — Simulateur scientifique de propagation d'information</p>
   </footer>
 
   <script type="module" src="src/main.js"></script>

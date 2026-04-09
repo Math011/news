@@ -13,22 +13,32 @@ export const CONFIG = {
   DEFAULT_RANGE: 65,
   MIN_RANGE: 30,
   MAX_RANGE: 120,
-  BASE_TRANSMISSION_CHANCE: 0.025, // Augmenté pour plus de dynamisme
+  BASE_TRANSMISSION_CHANCE: 0.025,
   
   // Temps (en frames, 60fps)
-  TIME_TO_SPREAD: 90,        // Frames avant qu'un informé devienne diffuseur
-  TIME_TO_SATURATED: 900,    // Frames avant saturation (lassitude) ~15s
-  TIME_TO_FORGOTTEN: 1800,   // Frames avant oubli total ~30s
+  TIME_TO_SPREAD: 90,
+  TIME_TO_SATURATED: 900,
+  TIME_TO_FORGOTTEN: 1800,
   
   // Conviction
-  EXPOSURES_TO_BELIEVE: 2,   // Expositions pour commencer à croire
-  EXPOSURES_TO_CONVINCED: 4, // Expositions pour être convaincu
-  CONVICTION_DECAY: 0.0003,  // Perte de conviction par frame
+  EXPOSURES_TO_BELIEVE: 2,
+  EXPOSURES_TO_CONVINCED: 4,
+  CONVICTION_DECAY: 0.0003,
   
   // Température de l'info
   INFO_INITIAL_HEAT: 1.0,
   INFO_HEAT_DECAY: 0.0002,
   INFO_MIN_HEAT: 0.05,
+  
+  // === NOUVEAU : Déformation de l'info ===
+  INFO_DISTORTION_RATE: 0.08,      // Chance de déformation par transmission
+  INFO_DISTORTION_AMOUNT: 0.12,    // Quantité de déformation
+  DISTORTION_VIRALITY_BOOST: 1.3,  // L'info déformée peut être plus virale
+  DISTORTION_CREDIBILITY_PENALTY: 0.15, // Mais moins crédible
+  
+  // === NOUVEAU : Vérité de l'info ===
+  DEFAULT_TRUTH: 0.5,              // 0 = fake news, 1 = vérité
+  SKEPTIC_TRUTH_DETECTION: 0.6,    // Les sceptiques détectent mieux le faux
   
   // Vitesse des agents
   AGENT_SPEED: 0.35,
@@ -36,43 +46,107 @@ export const CONFIG = {
   
   // Groupes sociaux
   GROUP_COUNT: 3,
-  SAME_GROUP_BONUS: 2.5,     // Multiplicateur transmission même groupe
-  DIFF_GROUP_PENALTY: 0.25,  // Multiplicateur transmission groupe différent
-  BRIDGE_AGENT_CHANCE: 0.12, // Chance d'être un "pont" entre groupes
+  SAME_GROUP_BONUS: 2.5,
+  DIFF_GROUP_PENALTY: 0.25,
+  BRIDGE_AGENT_CHANCE: 0.12,
   
   // Personnalités (distribution)
   PERSONALITY_DISTRIBUTION: {
-    receptive: 0.25,    // Réceptifs
-    skeptic: 0.20,      // Sceptiques
-    social: 0.25,       // Bavards
-    introvert: 0.30,    // Introvertis
+    receptive: 0.25,
+    skeptic: 0.20,
+    social: 0.25,
+    introvert: 0.30,
   },
   
   // Événements
-  EVENT_CHANCE: 0.0008,      // Chance par frame qu'un événement se produise
-  EVENT_DURATION: 480,       // Durée d'un événement (8 secondes à 60fps)
-  EVENT_COOLDOWN: 300,       // Temps minimum entre événements
+  EVENT_CHANCE: 0.0008,
+  EVENT_DURATION: 480,
+  EVENT_COOLDOWN: 300,
+  
+  // === NOUVEAU : Expériences prédéfinies ===
+  EXPERIMENTS: {
+    freeplay: {
+      id: 'freeplay',
+      name: '🎮 Mode Libre',
+      description: 'Explorez librement la propagation',
+      params: {},
+    },
+    viral: {
+      id: 'viral',
+      name: '🔥 Viralité explosive',
+      description: 'Pourquoi certaines infos deviennent virales ?',
+      question: 'Quel seuil de viralité déclenche une propagation massive ?',
+      params: {
+        virality: 0.9,
+        truth: 0.3,
+        population: 100,
+      },
+    },
+    skeptics: {
+      id: 'skeptics',
+      name: '🧐 Société sceptique',
+      description: 'Impact d\'une population sceptique',
+      question: 'Les sceptiques peuvent-ils bloquer une fake news ?',
+      params: {
+        virality: 0.7,
+        truth: 0.2,
+        skepticRatio: 0.5,
+        population: 80,
+      },
+    },
+    bubbles: {
+      id: 'bubbles',
+      name: '🫧 Bulles sociales',
+      description: 'L\'info reste-t-elle dans sa bulle ?',
+      question: 'Les groupes isolés ralentissent-ils la diffusion ?',
+      params: {
+        virality: 0.6,
+        sameGroupBonus: 4.0,
+        diffGroupPenalty: 0.1,
+        population: 90,
+      },
+    },
+    influencer: {
+      id: 'influencer',
+      name: '🎤 Pouvoir des influenceurs',
+      description: 'Un influenceur change-t-il tout ?',
+      question: 'Quel est l\'impact d\'un super-diffuseur ?',
+      params: {
+        virality: 0.4,
+        forceInfluencer: true,
+        population: 80,
+      },
+    },
+    truth: {
+      id: 'truth',
+      name: '✅ Vérité vs Fake News',
+      description: 'La vérité se propage-t-elle moins vite ?',
+      question: 'Une info vraie est-elle désavantagée ?',
+      params: {
+        virality: 0.5,
+        compareTruth: true,
+        population: 80,
+      },
+    },
+  },
   
   // Couleurs
   COLORS: {
-    // États
     ignorant: '#6b7280',
     informed: '#fbbf24',
     spreading: '#ef4444',
     saturated: '#78716c',
     forgotten: '#4b5563',
     
-    // Personnalités (bordures/halos)
     receptive: '#34d399',
     skeptic: '#60a5fa',
     social: '#f97316',
     introvert: '#1f2937',
     
-    // Groupes
     groups: [
-      'rgba(239, 68, 68, 0.12)',   // Rouge
-      'rgba(59, 130, 246, 0.12)',  // Bleu
-      'rgba(34, 197, 94, 0.12)',   // Vert
+      'rgba(239, 68, 68, 0.12)',
+      'rgba(59, 130, 246, 0.12)',
+      'rgba(34, 197, 94, 0.12)',
     ],
     groupBorders: [
       '#ef4444',
@@ -80,18 +154,21 @@ export const CONFIG = {
       '#22c55e',
     ],
     
-    // Chaleur
+    // Info selon vérité
+    truthHigh: '#22c55e',    // Vérité = vert
+    truthMid: '#f59e0b',     // Mixte = orange
+    truthLow: '#ef4444',     // Fake = rouge
+    
     hot: '#ef4444',
     warm: '#f97316',
     cool: '#60a5fa',
     cold: '#6b7280',
     
-    // Général
     background: '#0f0f1a',
     grid: 'rgba(255,255,255,0.02)',
   },
   
-  // Événements disponibles
+  // Événements
   EVENTS: {
     media: {
       id: 'media',
@@ -142,13 +219,13 @@ export const CONFIG = {
       id: 'factcheck',
       name: '✅ Fact-check',
       description: 'Des experts vérifient l\'info',
-      effect: 'credibilityDrop',
+      effect: 'factcheck',
       multiplier: 0.5,
       heatBoost: -0.1,
+      truthReveal: true,  // Révèle la vérité
       type: 'neutral',
     },
   },
   
-  // Sauvegarde
-  SAVE_KEY: 'infospread_v2',
+  SAVE_KEY: 'infospread_v3',
 };

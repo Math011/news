@@ -13,9 +13,17 @@ export class Simulation {
     // Paramètres ajustables
     this.virality = CONFIG.DEFAULT_VIRALITY;
     this.range = CONFIG.DEFAULT_RANGE;
+    this.truth = CONFIG.DEFAULT_TRUTH;
+    
+    // Paramètres de groupe (peuvent être modifiés par expérience)
+    this.sameGroupBonus = CONFIG.SAME_GROUP_BONUS;
+    this.diffGroupPenalty = CONFIG.DIFF_GROUP_PENALTY;
     
     // Information active
     this.info = null;
+    
+    // Expérience en cours
+    this.currentExperiment = null;
     
     // Événement actif
     this.activeEvent = null;
@@ -33,10 +41,26 @@ export class Simulation {
       peakReached: 0,
       spreadRate: 0,
       infoHeat: 0,
+      infoTruth: 0,
+      infoDistortion: 0,
+      avgConviction: 0,
     };
     
-    // Historique pour calculer la vitesse
+    // Résultats de l'expérience
+    this.experimentResults = {
+      timeToFirstSpread: null,
+      timeTo25Percent: null,
+      timeTo50Percent: null,
+      timeTo75Percent: null,
+      peakReachedTime: null,
+      finalReached: 0,
+      avgDistortion: 0,
+      groupPenetration: [0, 0, 0],
+    };
+    
+    // Historique pour graphiques
     this.history = [];
+    this.fullHistory = []; // Historique complet pour analyse
     
     // Bounds du canvas
     this.bounds = {
@@ -48,14 +72,48 @@ export class Simulation {
   /**
    * Initialiser la population
    */
-  init(populationCount) {
+  init(populationCount, experimentParams = null) {
     this.agents = [];
     this.time = 0;
     this.history = [];
+    this.fullHistory = [];
     this.info = null;
     this.activeEvent = null;
     this.eventTimer = 0;
     this.eventCooldown = 0;
+    
+    // Reset des résultats
+    this.experimentResults = {
+      timeToFirstSpread: null,
+      timeTo25Percent: null,
+      timeTo50Percent: null,
+      timeTo75Percent: null,
+      peakReachedTime: null,
+      finalReached: 0,
+      avgDistortion: 0,
+      groupPenetration: [0, 0, 0],
+    };
+    
+    // Appliquer les paramètres d'expérience
+    if (experimentParams) {
+      if (experimentParams.virality !== undefined) this.virality = experimentParams.virality;
+      if (experimentParams.truth !== undefined) this.truth = experimentParams.truth;
+      if (experimentParams.sameGroupBonus !== undefined) this.sameGroupBonus = experimentParams.sameGroupBonus;
+      if (experimentParams.diffGroupPenalty !== undefined) this.diffGroupPenalty = experimentParams.diffGroupPenalty;
+    }
+    
+    // Distribution des personnalités (peut être modifiée par expérience)
+    let distribution = { ...CONFIG.PERSONALITY_DISTRIBUTION };
+    if (experimentParams?.skepticRatio !== undefined) {
+      const skepticRatio = experimentParams.skepticRatio;
+      const remaining = 1 - skepticRatio;
+      distribution = {
+        receptive: remaining * 0.33,
+        skeptic: skepticRatio,
+        social: remaining * 0.33,
+        introvert: remaining * 0.34,
+      };
+    }
     
     // Créer les agents avec position dans leur zone de groupe
     for (let i = 0; i < populationCount; i++) {
@@ -65,9 +123,18 @@ export class Simulation {
       const x = zone.x + Math.random() * zone.width;
       const y = zone.y + Math.random() * zone.height;
       
-      const agent = new Agent(i, x, y);
-      agent.group = group; // Forcer le groupe selon la position
+      const agent = new Agent(i, x, y, distribution);
+      agent.group = group;
       this.agents.push(agent);
+    }
+    
+    // Forcer un influenceur si demandé
+    if (experimentParams?.forceInfluencer) {
+      const randomAgent = this.agents[Math.floor(Math.random() * this.agents.length)];
+      randomAgent.personality = 'social';
+      randomAgent.socialness = 1.0;
+      randomAgent.credibility = 1.0;
+      randomAgent.isInfluencer = true;
     }
     
     this.updateStats();
@@ -107,11 +174,14 @@ export class Simulation {
     }
     
     if (closest && minDist < 50) {
-      // Créer l'info
+      // Créer l'info avec vérité et déformation
       this.info = {
         id: Date.now(),
         virality: this.virality,
         heat: CONFIG.INFO_INITIAL_HEAT,
+        truth: this.truth,           // Niveau de vérité (0 = fake, 1 = vrai)
+        distortion: 0,               // Niveau de déformation accumulée
+        originalTruth: this.truth,   // Vérité originale pour comparaison
         sourceId: closest.id,
         createdAt: this.time,
       };
@@ -122,15 +192,36 @@ export class Simulation {
       closest.convictionLevel = 1.0;
       closest.exposures = CONFIG.EXPOSURES_TO_CONVINCED;
       closest.waveRadius = 0;
+      closest.infoDistortion = 0; // Sa version n'est pas déformée
       
       // Augmenter sa crédibilité (c'est la source)
       closest.credibility = Math.min(1, closest.credibility + 0.3);
       
       this.updateStats();
-      return true;
+      return closest; // Retourner l'agent source
     }
     
-    return false;
+    return null;
+  }
+
+  /**
+   * Lancer une expérience prédéfinie
+   */
+  startExperiment(experimentId, populationCount) {
+    const experiment = CONFIG.EXPERIMENTS[experimentId];
+    if (!experiment) return false;
+    
+    this.currentExperiment = experiment;
+    
+    // Reset avec les paramètres de l'expérience
+    this.virality = experiment.params.virality ?? CONFIG.DEFAULT_VIRALITY;
+    this.truth = experiment.params.truth ?? CONFIG.DEFAULT_TRUTH;
+    this.sameGroupBonus = experiment.params.sameGroupBonus ?? CONFIG.SAME_GROUP_BONUS;
+    this.diffGroupPenalty = experiment.params.diffGroupPenalty ?? CONFIG.DIFF_GROUP_PENALTY;
+    
+    this.init(experiment.params.population ?? populationCount, experiment.params);
+    
+    return true;
   }
 
   /**
@@ -262,14 +353,25 @@ export class Simulation {
       }
     }
     
-    if (event.effect === 'credibilityDrop') {
-      // Réduire la conviction de ceux qui ne sont pas convaincus
-      for (const agent of this.agents) {
-        if (agent.state === 'informed' && agent.convictionLevel < 0.7) {
-          agent.convictionLevel *= 0.5;
-          if (agent.convictionLevel < 0.2) {
-            agent.state = 'ignorant';
-            agent.info = null;
+    if (event.effect === 'factcheck') {
+      // Le fact-check a plus d'impact si l'info est fausse
+      if (this.info) {
+        const truthImpact = 1 - this.info.truth; // Plus d'impact si fake news
+        
+        for (const agent of this.agents) {
+          if (agent.state === 'informed' || agent.state === 'spreading') {
+            // Les sceptiques réagissent plus au fact-check
+            const skepticBonus = agent.personality === 'skeptic' ? 1.5 : 1;
+            const convictionLoss = truthImpact * 0.4 * skepticBonus;
+            
+            agent.convictionLevel -= convictionLoss;
+            
+            // Si pas convaincu, peut abandonner l'info
+            if (agent.convictionLevel < 0.15) {
+              agent.state = 'ignorant';
+              agent.info = null;
+              agent.convictionLevel = 0;
+            }
           }
         }
       }
@@ -316,6 +418,7 @@ export class Simulation {
           if (Math.random() < probability) {
             newExposures.push({
               target,
+              spreader,
               sourceCredibility: spreader.credibility,
             });
           }
@@ -323,9 +426,34 @@ export class Simulation {
       }
     }
     
-    // Appliquer les nouvelles expositions
-    for (const { target, sourceCredibility } of newExposures) {
-      target.expose(this.info, sourceCredibility, this.time);
+    // Appliquer les nouvelles expositions avec possible déformation
+    for (const { target, sourceCredibility, spreader } of newExposures) {
+      // Déformation de l'info pendant la transmission
+      let distortedInfo = { ...this.info };
+      
+      if (Math.random() < CONFIG.INFO_DISTORTION_RATE) {
+        // L'info se déforme !
+        distortedInfo.distortion = (spreader?.infoDistortion || 0) + CONFIG.INFO_DISTORTION_AMOUNT;
+        
+        // Info déformée = potentiellement plus virale mais moins crédible
+        distortedInfo.virality = Math.min(1, this.info.virality * CONFIG.DISTORTION_VIRALITY_BOOST);
+      } else {
+        distortedInfo.distortion = spreader?.infoDistortion || 0;
+      }
+      
+      // Les sceptiques détectent mieux les fausses infos
+      let effectiveCredibility = sourceCredibility;
+      if (target.personality === 'skeptic' && this.info.truth < 0.5) {
+        // Réduction de la crédibilité perçue pour les fake news
+        const truthPenalty = (1 - this.info.truth) * CONFIG.SKEPTIC_TRUTH_DETECTION;
+        effectiveCredibility *= (1 - truthPenalty);
+      }
+      
+      const wasInformed = target.expose(distortedInfo, effectiveCredibility, this.time);
+      
+      if (wasInformed) {
+        target.infoDistortion = distortedInfo.distortion;
+      }
     }
   }
 
@@ -336,8 +464,9 @@ export class Simulation {
     // Base plus élevée
     let probability = CONFIG.BASE_TRANSMISSION_CHANCE * 1.5;
     
-    // Viralité de l'info
-    probability *= (0.5 + this.virality);
+    // Viralité de l'info (peut être boostée par déformation)
+    const effectiveVirality = this.info.virality * (1 + (spreader.infoDistortion || 0) * 0.3);
+    probability *= (0.5 + effectiveVirality);
     
     // Température de l'info (info froide = moins de transmission)
     probability *= (0.3 + this.info.heat * 0.7);
@@ -349,17 +478,22 @@ export class Simulation {
     // Réceptivité de la cible (TRÈS important)
     probability *= (0.2 + target.receptivity * 0.8);
     
-    // Scepticisme de la cible (réduit beaucoup)
-    probability *= (1 - target.skepticism * 0.8);
+    // Scepticisme + détection de fake news
+    let skepticismFactor = 1 - target.skepticism * 0.8;
+    if (target.personality === 'skeptic' && this.info.truth < 0.5) {
+      // Les sceptiques bloquent mieux les fake news
+      skepticismFactor *= (0.3 + this.info.truth * 0.7);
+    }
+    probability *= skepticismFactor;
     
     // Puissance de transmission (inclut socialness, crédibilité, conviction)
     probability *= (0.3 + transmissionPower * 0.7);
     
-    // Bonus même groupe
+    // Bonus même groupe (utilise les paramètres modifiables)
     if (spreader.isSameGroup(target)) {
-      probability *= CONFIG.SAME_GROUP_BONUS;
+      probability *= this.sameGroupBonus;
     } else {
-      probability *= CONFIG.DIFF_GROUP_PENALTY;
+      probability *= this.diffGroupPenalty;
     }
     
     // Bonus si déjà exposé (répétition)
@@ -382,24 +516,67 @@ export class Simulation {
     let spreading = 0;
     let saturated = 0;
     let forgotten = 0;
+    let totalConviction = 0;
+    let totalDistortion = 0;
+    let informedCount = 0;
+    
+    // Compteurs par groupe
+    const groupInformed = [0, 0, 0];
+    const groupTotal = [0, 0, 0];
     
     for (const agent of this.agents) {
+      // Compter par groupe
+      if (agent.group < CONFIG.GROUP_COUNT) {
+        groupTotal[agent.group]++;
+      }
+      
       switch (agent.state) {
         case 'ignorant': ignorant++; break;
-        case 'informed': informed++; break;
-        case 'spreading': spreading++; break;
-        case 'saturated': saturated++; break;
+        case 'informed': 
+          informed++; 
+          groupInformed[agent.group]++;
+          totalConviction += agent.convictionLevel;
+          totalDistortion += agent.infoDistortion || 0;
+          informedCount++;
+          break;
+        case 'spreading': 
+          spreading++; 
+          groupInformed[agent.group]++;
+          totalConviction += agent.convictionLevel;
+          totalDistortion += agent.infoDistortion || 0;
+          informedCount++;
+          break;
+        case 'saturated': 
+          saturated++; 
+          groupInformed[agent.group]++;
+          break;
         case 'forgotten': forgotten++; break;
       }
     }
     
     const totalReached = informed + spreading + saturated + forgotten;
     const currentlyActive = informed + spreading;
+    const percentReached = this.agents.length > 0 
+      ? Math.round((totalReached / this.agents.length) * 100) 
+      : 0;
     
     // Calculer la vitesse de propagation
     this.history.push({ time: this.time, reached: totalReached });
     if (this.history.length > 60) {
       this.history.shift();
+    }
+    
+    // Historique complet pour graphiques
+    if (this.time % 10 === 0) { // Échantillonner toutes les 10 frames
+      this.fullHistory.push({
+        time: this.time,
+        percentReached,
+        informed,
+        spreading,
+        saturated,
+        heat: this.info ? this.info.heat : 0,
+        avgDistortion: informedCount > 0 ? totalDistortion / informedCount : 0,
+      });
     }
     
     let spreadRate = 0;
@@ -411,6 +588,29 @@ export class Simulation {
       spreadRate = timeDiff > 0 ? reachedDiff / timeDiff : 0;
     }
     
+    // Mettre à jour les résultats d'expérience
+    if (this.experimentResults.timeToFirstSpread === null && spreading > 0) {
+      this.experimentResults.timeToFirstSpread = this.time;
+    }
+    if (this.experimentResults.timeTo25Percent === null && percentReached >= 25) {
+      this.experimentResults.timeTo25Percent = this.time;
+    }
+    if (this.experimentResults.timeTo50Percent === null && percentReached >= 50) {
+      this.experimentResults.timeTo50Percent = this.time;
+    }
+    if (this.experimentResults.timeTo75Percent === null && percentReached >= 75) {
+      this.experimentResults.timeTo75Percent = this.time;
+    }
+    if (totalReached > this.experimentResults.finalReached) {
+      this.experimentResults.finalReached = totalReached;
+      this.experimentResults.peakReachedTime = this.time;
+    }
+    
+    // Pénétration par groupe
+    this.experimentResults.groupPenetration = groupTotal.map((total, i) => 
+      total > 0 ? Math.round((groupInformed[i] / total) * 100) : 0
+    );
+    
     this.stats = {
       ignorant,
       informed,
@@ -421,10 +621,12 @@ export class Simulation {
       currentlyActive,
       peakReached: Math.max(this.stats.peakReached || 0, totalReached),
       spreadRate: Math.max(0, spreadRate).toFixed(1),
-      percentReached: this.agents.length > 0 
-        ? Math.round((totalReached / this.agents.length) * 100) 
-        : 0,
+      percentReached,
       infoHeat: this.info ? Math.round(this.info.heat * 100) : 0,
+      infoTruth: this.info ? Math.round(this.info.truth * 100) : 50,
+      infoDistortion: informedCount > 0 ? Math.round((totalDistortion / informedCount) * 100) : 0,
+      avgConviction: informedCount > 0 ? Math.round((totalConviction / informedCount) * 100) : 0,
+      groupPenetration: this.experimentResults.groupPenetration,
     };
   }
 

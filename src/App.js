@@ -4,7 +4,7 @@ import { Renderer } from './Renderer.js';
 import { UI } from './UI.js';
 
 /**
- * App - Orchestrateur principal
+ * App - Orchestrateur principal avec mode expériences
  */
 export class App {
   constructor() {
@@ -20,6 +20,7 @@ export class App {
     this.animationId = null;
     this.hasStarted = false;
     this.lastEventId = null;
+    this.currentExperiment = 'freeplay';
     
     this.init();
   }
@@ -31,11 +32,15 @@ export class App {
     // Initialiser l'UI
     this.ui.init({
       onViralityChange: (value) => this.simulation.setVirality(value),
+      onTruthChange: (value) => {
+        this.simulation.truth = value;
+      },
       onPopulationChange: (value) => this.resetSimulation(value),
       onRangeChange: (value) => this.simulation.setRange(value),
       onReset: () => this.reset(),
       onPlayPause: () => this.togglePlayPause(),
       onSpeedChange: (speed) => this.speed = speed,
+      onExperimentChange: (experimentId) => this.loadExperiment(experimentId),
     });
     
     // Événements canvas
@@ -51,9 +56,39 @@ export class App {
   }
 
   /**
+   * Charger une expérience
+   */
+  loadExperiment(experimentId) {
+    this.currentExperiment = experimentId;
+    const experiment = CONFIG.EXPERIMENTS[experimentId];
+    
+    if (!experiment) return;
+    
+    // Réinitialiser avec les paramètres de l'expérience
+    this.simulation.startExperiment(experimentId, this.ui.getPopulation());
+    
+    this.hasStarted = false;
+    this.lastEventId = null;
+    this.ui.showInstructions(true);
+    this.ui.updatePlayButton(false);
+    this.ui.updateStats(this.simulation.stats, 0);
+    this.ui.hideEvent();
+    this.ui.hideResults();
+    
+    // Mettre à jour les compteurs de personnalités
+    const personalities = this.simulation.countPersonalities();
+    this.ui.updatePersonalityCounts(personalities);
+  }
+
+  /**
    * Réinitialiser la simulation
    */
   resetSimulation(population) {
+    if (this.currentExperiment !== 'freeplay') {
+      this.loadExperiment(this.currentExperiment);
+      return;
+    }
+    
     this.simulation.reset(population);
     this.hasStarted = false;
     this.lastEventId = null;
@@ -61,6 +96,10 @@ export class App {
     this.ui.updatePlayButton(false);
     this.ui.updateStats(this.simulation.stats, 0);
     this.ui.hideEvent();
+    this.ui.hideResults();
+    
+    // Appliquer le slider de vérité
+    this.simulation.truth = this.ui.getTruth();
     
     // Mettre à jour les compteurs de personnalités
     const personalities = this.simulation.countPersonalities();
@@ -94,13 +133,23 @@ export class App {
     const y = (e.clientY - rect.top) * (this.canvas.height / rect.height);
     
     // Placer une source d'information
-    const success = this.simulation.placeInfoSource(x, y);
+    const sourceAgent = this.simulation.placeInfoSource(x, y);
     
-    if (success) {
+    if (sourceAgent) {
       this.hasStarted = true;
       this.simulation.start();
       this.ui.showInstructions(false);
       this.ui.updatePlayButton(true);
+      
+      // Si l'expérience demande un influenceur, le rendre influenceur
+      const experiment = CONFIG.EXPERIMENTS[this.currentExperiment];
+      if (experiment?.params?.forceInfluencer && !sourceAgent.isInfluencer) {
+        // L'agent source devient l'influenceur
+        sourceAgent.personality = 'social';
+        sourceAgent.socialness = 1.0;
+        sourceAgent.credibility = 1.0;
+        sourceAgent.isInfluencer = true;
+      }
     }
   }
 

@@ -4,7 +4,7 @@ import { CONFIG } from './config.js';
  * Agent - Un habitant avec personnalité, conviction et groupe social
  */
 export class Agent {
-  constructor(id, x, y) {
+  constructor(id, x, y, customDistribution = null) {
     this.id = id;
     this.x = x;
     this.y = y;
@@ -13,7 +13,7 @@ export class Agent {
     this.state = 'ignorant';
     
     // Personnalité (déterminée à la création)
-    this.personality = this.generatePersonality();
+    this.personality = this.generatePersonality(customDistribution);
     this.receptivity = this.generateReceptivity();
     this.skepticism = this.generateSkepticism();
     this.socialness = this.generateSocialness();
@@ -32,6 +32,10 @@ export class Agent {
     this.convictionLevel = 0;
     this.timeInformed = 0;
     this.lastExposureTime = 0;
+    this.infoDistortion = 0; // Niveau de déformation de l'info reçue
+    
+    // Flags spéciaux
+    this.isInfluencer = false;
     
     // Mouvement
     this.targetX = x;
@@ -48,9 +52,9 @@ export class Agent {
   /**
    * Générer une personnalité selon la distribution
    */
-  generatePersonality() {
+  generatePersonality(customDistribution = null) {
     const rand = Math.random();
-    const dist = CONFIG.PERSONALITY_DISTRIBUTION;
+    const dist = customDistribution || CONFIG.PERSONALITY_DISTRIBUTION;
     
     if (rand < dist.receptive) return 'receptive';
     if (rand < dist.receptive + dist.skeptic) return 'skeptic';
