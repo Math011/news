@@ -3,237 +3,283 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>InfoSpread - Laboratoire de propagation d'information</title>
+  <title>InfoSpread Lab - Simulateur de propagation</title>
   <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
-  <header>
-    <h1><span>🧪</span> InfoSpread Lab</h1>
-    <div class="header-info">
-      <div class="experiment-badge hidden" id="experiment-badge">
-        <span class="experiment-name" id="experiment-name">Mode Libre</span>
-      </div>
-      <div class="time-display" id="stat-time">00:00</div>
-    </div>
-  </header>
-
-  <div class="container">
-    <!-- Canvas principal -->
-    <div class="canvas-wrapper">
-      <canvas id="canvas"></canvas>
-      
-      <!-- Instructions -->
-      <div class="instructions" id="instructions">
-        <h2>👆 Cliquez sur un agent</h2>
-        <p>pour propager une information</p>
-      </div>
-      
-      <!-- Bannière d'événement -->
-      <div class="event-banner hidden" id="event-banner">
-        <div class="event-name" id="event-name">📰 Événement</div>
-        <div class="event-desc" id="event-desc">Description de l'événement</div>
-        <div class="event-timer" id="event-timer"></div>
-      </div>
-      
-      <!-- Question scientifique (pour les expériences) -->
-      <div class="science-question hidden" id="science-question">
-        <span class="question-icon">🔬</span>
-        <span class="question-text" id="question-text">Question de recherche</span>
-      </div>
-    </div>
-
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <!-- Sélecteur d'expérience -->
-      <div class="card experiment-card">
-        <h3>🧪 Expérience</h3>
-        <select id="experiment-select" class="experiment-select">
-          <option value="freeplay">🎮 Mode Libre</option>
-          <option value="viral">🔥 Viralité explosive</option>
-          <option value="skeptics">🧐 Société sceptique</option>
-          <option value="bubbles">🫧 Bulles sociales</option>
-          <option value="influencer">🎤 Pouvoir des influenceurs</option>
-          <option value="truth">✅ Vérité vs Fake News</option>
-        </select>
-        <p class="experiment-desc" id="experiment-desc">Explorez librement la propagation</p>
-      </div>
-
-      <!-- Stats -->
-      <div class="card">
-        <h3>📊 Statistiques</h3>
-        <div class="stats-grid">
-          <div class="stat-item">
-            <span class="stat-label">Ignorants</span>
-            <span class="stat-value ignorant" id="stat-ignorant">0</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Informés</span>
-            <span class="stat-value informed" id="stat-informed">0</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Diffuseurs</span>
-            <span class="stat-value spreading" id="stat-spreading">0</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Saturés</span>
-            <span class="stat-value saturated" id="stat-saturated">0</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">% Touchés</span>
-            <span class="stat-value" id="stat-percent">0%</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Vitesse</span>
-            <span class="stat-value" id="stat-rate">0/s</span>
-          </div>
-        </div>
-        
-        <!-- Barre de progression -->
-        <div class="progress-bar">
-          <div class="segment ignorant" id="bar-ignorant" style="width: 100%"></div>
-          <div class="segment informed" id="bar-informed" style="width: 0%"></div>
-          <div class="segment spreading" id="bar-spreading" style="width: 0%"></div>
-          <div class="segment saturated" id="bar-saturated" style="width: 0%"></div>
+  <div class="app-container">
+    <!-- Header compact -->
+    <header>
+      <div class="header-left">
+        <h1><span>🧪</span> InfoSpread Lab</h1>
+        <div class="experiment-badge hidden" id="experiment-badge">
+          <span id="experiment-name">Mode Libre</span>
         </div>
       </div>
-
-      <!-- Indicateurs scientifiques -->
-      <div class="card">
-        <h3>🔬 Indicateurs</h3>
-        <div class="indicators">
-          <!-- Température -->
-          <div class="indicator-row">
-            <span class="indicator-label">🌡️ Température</span>
-            <div class="indicator-bar">
-              <div class="indicator-fill heat-fill" id="heat-fill" style="width: 0%"></div>
-            </div>
-            <span class="indicator-value" id="stat-heat">0%</span>
-          </div>
-          
-          <!-- Vérité -->
-          <div class="indicator-row">
-            <span class="indicator-label">✅ Vérité</span>
-            <div class="indicator-bar truth-bar">
-              <div class="indicator-fill truth-fill" id="truth-fill" style="width: 50%"></div>
-            </div>
-            <span class="indicator-value" id="stat-truth">50%</span>
-          </div>
-          
-          <!-- Déformation -->
-          <div class="indicator-row">
-            <span class="indicator-label">🔀 Déformation</span>
-            <div class="indicator-bar distortion-bar">
-              <div class="indicator-fill distortion-fill" id="distortion-fill" style="width: 0%"></div>
-            </div>
-            <span class="indicator-value" id="stat-distortion">0%</span>
-          </div>
-          
-          <!-- Conviction moyenne -->
-          <div class="indicator-row">
-            <span class="indicator-label">💪 Conviction</span>
-            <div class="indicator-bar conviction-bar">
-              <div class="indicator-fill conviction-fill" id="conviction-fill" style="width: 0%"></div>
-            </div>
-            <span class="indicator-value" id="stat-conviction">0%</span>
-          </div>
+      <div class="header-right">
+        <div class="quick-stats">
+          <span class="quick-stat" id="quick-percent">0%</span>
+          <span class="quick-stat-label">touchés</span>
         </div>
-        
-        <!-- Pénétration par groupe -->
-        <div class="group-penetration" id="group-penetration">
-          <span class="indicator-label">Groupes :</span>
-          <span class="group-stat group-a" id="group-a">A: 0%</span>
-          <span class="group-stat group-b" id="group-b">B: 0%</span>
-          <span class="group-stat group-c" id="group-c">C: 0%</span>
+        <div class="time-display" id="stat-time">00:00</div>
+        <div class="control-buttons">
+          <button class="btn-icon" id="btn-play-pause" title="Play/Pause (Espace)">▶️</button>
+          <button class="btn-icon" id="btn-speed" title="Vitesse">1x</button>
+          <button class="btn-icon" id="btn-reset" title="Reset">🔄</button>
         </div>
       </div>
+    </header>
 
-      <!-- Personnalités -->
-      <div class="card">
-        <h3>🎭 Personnalités</h3>
-        <div class="personality-legend">
-          <div class="legend-item" id="legend-receptive">
-            <div class="legend-dot receptive"></div>
-            <span class="legend-text">Réceptif</span>
-            <span class="count">0</span>
-          </div>
-          <div class="legend-item" id="legend-skeptic">
-            <div class="legend-dot skeptic"></div>
-            <span class="legend-text">Sceptique</span>
-            <span class="count">0</span>
-          </div>
-          <div class="legend-item" id="legend-social">
-            <div class="legend-dot social"></div>
-            <span class="legend-text">Bavard</span>
-            <span class="count">0</span>
-          </div>
-          <div class="legend-item" id="legend-introvert">
-            <div class="legend-dot introvert"></div>
-            <span class="legend-text">Introverti</span>
-            <span class="count">0</span>
-          </div>
+    <!-- Main content -->
+    <div class="main-content">
+      <!-- Panneau gauche : Paramètres -->
+      <aside class="panel panel-left">
+        <!-- Expérience -->
+        <div class="panel-section">
+          <label class="section-label">🧪 Expérience</label>
+          <select id="experiment-select" class="select-experiment">
+            <option value="freeplay">🎮 Mode Libre</option>
+            <option value="viral">🔥 Viralité explosive</option>
+            <option value="skeptics">🧐 Société sceptique</option>
+            <option value="bubbles">🫧 Bulles sociales</option>
+            <option value="influencer">🎤 Influenceurs</option>
+            <option value="truth">✅ Vérité vs Fake</option>
+            <option value="compare">⚖️ Comparaison A/B</option>
+          </select>
         </div>
-      </div>
 
-      <!-- Contrôles -->
-      <div class="card">
-        <h3>⚙️ Paramètres</h3>
-        <div class="controls">
-          <div class="control-group">
-            <div class="control-header">
-              <span class="control-label">Viralité</span>
-              <span class="control-value" id="value-virality">50%</span>
-            </div>
+        <!-- Paramètres rapides -->
+        <div class="panel-section">
+          <div class="param-row">
+            <label>Viralité</label>
             <input type="range" id="slider-virality" min="0.1" max="1" step="0.05" value="0.5">
+            <span id="value-virality">50%</span>
           </div>
-          
-          <div class="control-group">
-            <div class="control-header">
-              <span class="control-label">Vérité de l'info</span>
-              <span class="control-value" id="value-truth">50%</span>
-            </div>
+          <div class="param-row">
+            <label>Vérité</label>
             <input type="range" id="slider-truth" min="0" max="1" step="0.1" value="0.5">
+            <span id="value-truth">50%</span>
           </div>
-          
-          <div class="control-group">
-            <div class="control-header">
-              <span class="control-label">Population</span>
-              <span class="control-value" id="value-population">80</span>
-            </div>
-            <input type="range" id="slider-population" min="30" max="150" step="5" value="80">
+          <div class="param-row">
+            <label>Population</label>
+            <input type="range" id="slider-population" min="30" max="120" step="5" value="70">
+            <span id="value-population">70</span>
           </div>
-          
-          <div class="control-group">
-            <div class="control-header">
-              <span class="control-label">Portée</span>
-              <span class="control-value" id="value-range">65px</span>
-            </div>
-            <input type="range" id="slider-range" min="30" max="120" step="5" value="65">
-          </div>
-          
-          <div class="buttons">
-            <button class="btn-secondary" id="btn-reset">🔄 Reset</button>
-            <button class="btn-primary" id="btn-play-pause">▶️ Lancer</button>
-            <button class="btn-secondary btn-small" id="btn-speed">1x</button>
+          <div class="param-row">
+            <label>Portée</label>
+            <input type="range" id="slider-range" min="30" max="100" step="5" value="60">
+            <span id="value-range">60</span>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Panneau de résultats (apparaît quand la propagation se stabilise) -->
-  <div class="results-panel hidden" id="results-panel">
-    <div class="results-content">
-      <h2>📊 Résultats de l'expérience</h2>
-      <div class="results-grid" id="results-grid">
-        <!-- Rempli dynamiquement -->
-      </div>
-      <button class="btn-primary" id="btn-close-results">Fermer</button>
+
+        <!-- Personnalités -->
+        <div class="panel-section">
+          <label class="section-label">🎭 Population</label>
+          <div class="personality-compact">
+            <span class="pers-item receptive" data-tooltip="Réceptifs : acceptent facilement les infos, peu sceptiques">●<span id="count-receptive">0</span></span>
+            <span class="pers-item skeptic" data-tooltip="Sceptiques : difficiles à convaincre, détectent les fake news">●<span id="count-skeptic">0</span></span>
+            <span class="pers-item social" data-tooltip="Bavards : diffusent beaucoup, grande portée sociale">●<span id="count-social">0</span></span>
+            <span class="pers-item introvert" data-tooltip="Introvertis : diffusent peu même s'ils savent">●<span id="count-introvert">0</span></span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="panel-section">
+          <button class="btn-action" id="btn-relaunch">🔁 Relancer</button>
+          <button class="btn-action secondary" id="btn-variant">🎲 Variante</button>
+        </div>
+      </aside>
+
+      <!-- Zone centrale : Canvas -->
+      <main class="canvas-area">
+        <div class="canvas-wrapper">
+          <canvas id="canvas"></canvas>
+          
+          <!-- Instructions -->
+          <div class="instructions" id="instructions">
+            <div class="instructions-content">
+              <span class="instructions-icon">👆</span>
+              <span>Cliquez sur un agent pour démarrer</span>
+            </div>
+          </div>
+          
+          <!-- Événement -->
+          <div class="event-banner hidden" id="event-banner">
+            <span class="event-icon" id="event-icon">📰</span>
+            <div class="event-text">
+              <span class="event-name" id="event-name">Événement</span>
+              <span class="event-desc" id="event-desc">Description</span>
+            </div>
+            <div class="event-timer" id="event-timer"></div>
+          </div>
+
+          <!-- Question scientifique -->
+          <div class="science-question hidden" id="science-question">
+            <span>🔬</span>
+            <span id="question-text">Question de recherche</span>
+          </div>
+        </div>
+
+        <!-- Mini graphique en bas du canvas -->
+        <div class="mini-chart" id="mini-chart">
+          <canvas id="chart-canvas" width="400" height="60"></canvas>
+        </div>
+      </main>
+
+      <!-- Panneau droit : Stats -->
+      <aside class="panel panel-right">
+        <!-- États -->
+        <div class="panel-section">
+          <label class="section-label">📊 États</label>
+          <div class="states-grid">
+            <div class="state-item" data-tooltip="Agents qui n'ont pas encore reçu l'information">
+              <span class="state-value ignorant" id="stat-ignorant">0</span>
+              <span class="state-label">Ignorants</span>
+            </div>
+            <div class="state-item" data-tooltip="Agents qui ont reçu l'info mais ne la diffusent pas encore">
+              <span class="state-value informed" id="stat-informed">0</span>
+              <span class="state-label">Informés</span>
+            </div>
+            <div class="state-item" data-tooltip="Agents qui diffusent activement l'information autour d'eux">
+              <span class="state-value spreading" id="stat-spreading">0</span>
+              <span class="state-label">Diffuseurs</span>
+            </div>
+            <div class="state-item" data-tooltip="Agents lassés qui ne diffusent plus (ont oublié ou s'en désintéressent)">
+              <span class="state-value saturated" id="stat-saturated">0</span>
+              <span class="state-label">Saturés</span>
+            </div>
+          </div>
+          <div class="progress-bar">
+            <div class="segment ignorant" id="bar-ignorant"></div>
+            <div class="segment informed" id="bar-informed"></div>
+            <div class="segment spreading" id="bar-spreading"></div>
+            <div class="segment saturated" id="bar-saturated"></div>
+          </div>
+        </div>
+
+        <!-- Indicateurs -->
+        <div class="panel-section">
+          <label class="section-label">🔬 Indicateurs</label>
+          <div class="indicator" data-tooltip="Niveau d'intérêt pour l'info. Diminue avec le temps, les événements peuvent la relancer.">
+            <span class="ind-label">🌡️ Chaleur</span>
+            <div class="ind-bar"><div class="ind-fill heat" id="heat-fill"></div></div>
+            <span class="ind-value" id="stat-heat">0%</span>
+          </div>
+          <div class="indicator" data-tooltip="Niveau de véracité de l'information. Les sceptiques détectent mieux les fausses infos.">
+            <span class="ind-label">✅ Vérité</span>
+            <div class="ind-bar"><div class="ind-fill truth" id="truth-fill"></div></div>
+            <span class="ind-value" id="stat-truth">50%</span>
+          </div>
+          <div class="indicator" data-tooltip="Niveau de déformation de l'info en circulant. Une info déformée est plus virale mais moins crédible.">
+            <span class="ind-label">🔀 Déformation</span>
+            <div class="ind-bar"><div class="ind-fill distortion" id="distortion-fill"></div></div>
+            <span class="ind-value" id="stat-distortion">0%</span>
+          </div>
+          <div class="indicator" data-tooltip="Niveau moyen de conviction des agents informés. Plus c'est haut, plus ils diffusent activement.">
+            <span class="ind-label">💪 Conviction</span>
+            <div class="ind-bar"><div class="ind-fill conviction" id="conviction-fill"></div></div>
+            <span class="ind-value" id="stat-conviction">0%</span>
+          </div>
+        </div>
+
+        <!-- Groupes -->
+        <div class="panel-section">
+          <label class="section-label" data-tooltip="Pourcentage d'agents touchés dans chaque groupe social. L'info circule plus facilement dans un même groupe.">🌐 Groupes</label>
+          <div class="groups-row">
+            <span class="group-stat ga" id="group-a">A: 0%</span>
+            <span class="group-stat gb" id="group-b">B: 0%</span>
+            <span class="group-stat gc" id="group-c">C: 0%</span>
+          </div>
+        </div>
+
+        <!-- Vitesse -->
+        <div class="panel-section">
+          <div class="speed-stat">
+            <span class="speed-value" id="stat-rate">0</span>
+            <span class="speed-label">/sec</span>
+          </div>
+        </div>
+      </aside>
     </div>
   </div>
 
-  <footer>
-    <p>InfoSpread Lab v3 — Simulateur scientifique de propagation d'information</p>
-  </footer>
+  <!-- Modal Résultats -->
+  <div class="modal hidden" id="results-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📊 Résultats de l'expérience</h2>
+        <button class="btn-close" id="btn-close-results">✕</button>
+      </div>
+      
+      <div class="results-body">
+        <!-- Stats clés -->
+        <div class="results-stats" id="results-stats">
+          <!-- Rempli dynamiquement -->
+        </div>
+        
+        <!-- Graphique -->
+        <div class="results-chart">
+          <canvas id="results-chart-canvas" width="450" height="150"></canvas>
+        </div>
+        
+        <!-- Conclusion -->
+        <div class="results-conclusion" id="results-conclusion">
+          <!-- Rempli dynamiquement -->
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn-action" id="btn-relaunch-modal">🔁 Relancer</button>
+        <button class="btn-action secondary" id="btn-variant-modal">🎲 Variante</button>
+        <button class="btn-action secondary" id="btn-close-modal">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Comparaison -->
+  <div class="modal hidden" id="compare-modal">
+    <div class="modal-content wide">
+      <div class="modal-header">
+        <h2>⚖️ Comparaison A/B</h2>
+        <button class="btn-close" id="btn-close-compare">✕</button>
+      </div>
+      
+      <div class="compare-body">
+        <div class="compare-side" id="compare-a">
+          <h3>🅰️ Scénario A</h3>
+          <div class="compare-params">
+            <label>Vérité: <input type="range" id="compare-truth-a" min="0" max="1" step="0.1" value="0.9"> <span id="compare-truth-a-val">90%</span></label>
+          </div>
+          <div class="compare-canvas-wrap">
+            <canvas id="canvas-a" width="380" height="280"></canvas>
+          </div>
+          <div class="compare-stats" id="compare-stats-a">En attente...</div>
+        </div>
+        
+        <div class="compare-vs">VS</div>
+        
+        <div class="compare-side" id="compare-b">
+          <h3>🅱️ Scénario B</h3>
+          <div class="compare-params">
+            <label>Vérité: <input type="range" id="compare-truth-b" min="0" max="1" step="0.1" value="0.2"> <span id="compare-truth-b-val">20%</span></label>
+          </div>
+          <div class="compare-canvas-wrap">
+            <canvas id="canvas-b" width="380" height="280"></canvas>
+          </div>
+          <div class="compare-stats" id="compare-stats-b">En attente...</div>
+        </div>
+      </div>
+      
+      <div class="compare-conclusion hidden" id="compare-conclusion">
+        <!-- Conclusion de la comparaison -->
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn-action" id="btn-start-compare">▶️ Lancer la comparaison</button>
+        <button class="btn-action secondary" id="btn-close-compare-footer">Fermer</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="src/main.js"></script>
 </body>

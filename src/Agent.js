@@ -33,6 +33,7 @@ export class Agent {
     this.timeInformed = 0;
     this.lastExposureTime = 0;
     this.infoDistortion = 0; // Niveau de déformation de l'info reçue
+    this.wasEverInformed = false; // A été informé au moins une fois (ne redevient jamais false)
     
     // Flags spéciaux
     this.isInfluencer = false;
@@ -134,6 +135,7 @@ export class Agent {
       this.state = 'informed';
       this.info = { ...info };
       this.timeInformed = 0;
+      this.wasEverInformed = true; // Marquer comme ayant été informé au moins une fois
       return true;
     }
     

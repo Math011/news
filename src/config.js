@@ -128,6 +128,16 @@ export const CONFIG = {
         population: 80,
       },
     },
+    compare: {
+      id: 'compare',
+      name: '⚖️ Comparaison A/B',
+      description: 'Comparez deux scénarios côte à côte',
+      question: 'Quel facteur fait la différence ?',
+      params: {
+        isCompareMode: true,
+        population: 60,
+      },
+    },
   },
   
   // Couleurs

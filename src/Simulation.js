@@ -39,6 +39,8 @@ export class Simulation {
       forgotten: 0,
       totalReached: 0,
       peakReached: 0,
+      everReached: 0,        // Nombre d'agents ayant été touchés AU MOINS UNE FOIS
+      peakEverReached: 0,    // Pic maximum de everReached
       spreadRate: 0,
       infoHeat: 0,
       infoTruth: 0,
@@ -54,8 +56,10 @@ export class Simulation {
       timeTo75Percent: null,
       peakReachedTime: null,
       finalReached: 0,
+      maxEverReached: 0,     // Maximum de personnes ayant été touchées
       avgDistortion: 0,
       groupPenetration: [0, 0, 0],
+      peakGroupPenetration: [0, 0, 0], // Pic par groupe
     };
     
     // Historique pour graphiques
@@ -82,6 +86,25 @@ export class Simulation {
     this.eventTimer = 0;
     this.eventCooldown = 0;
     
+    // Reset des stats
+    this.stats = {
+      ignorant: 0,
+      informed: 0,
+      spreading: 0,
+      saturated: 0,
+      forgotten: 0,
+      totalReached: 0,
+      peakReached: 0,
+      everReached: 0,
+      peakEverReached: 0,
+      spreadRate: 0,
+      infoHeat: 0,
+      infoTruth: 0,
+      infoDistortion: 0,
+      avgConviction: 0,
+      groupPenetration: [0, 0, 0],
+    };
+    
     // Reset des résultats
     this.experimentResults = {
       timeToFirstSpread: null,
@@ -90,8 +113,10 @@ export class Simulation {
       timeTo75Percent: null,
       peakReachedTime: null,
       finalReached: 0,
+      maxEverReached: 0,
       avgDistortion: 0,
       groupPenetration: [0, 0, 0],
+      peakGroupPenetration: [0, 0, 0],
     };
     
     // Appliquer les paramètres d'expérience
@@ -193,6 +218,7 @@ export class Simulation {
       closest.exposures = CONFIG.EXPOSURES_TO_CONVINCED;
       closest.waveRadius = 0;
       closest.infoDistortion = 0; // Sa version n'est pas déformée
+      closest.wasEverInformed = true; // Marquer comme ayant été informé
       
       // Augmenter sa crédibilité (c'est la source)
       closest.credibility = Math.min(1, closest.credibility + 0.3);
@@ -464,47 +490,66 @@ export class Simulation {
     // Base plus élevée
     let probability = CONFIG.BASE_TRANSMISSION_CHANCE * 1.5;
     
-    // Viralité de l'info (peut être boostée par déformation)
-    const effectiveVirality = this.info.virality * (1 + (spreader.infoDistortion || 0) * 0.3);
+    // === DÉFORMATION = VIRALITÉ BOOSTÉE ===
+    const distortion = spreader.infoDistortion || 0;
+    let effectiveVirality = this.info.virality;
+    
+    // Info déformée = plus virale (sensationnalisme)
+    if (distortion > 0.3) {
+      effectiveVirality *= (1 + distortion * 0.5); // Jusqu'à +50% viralité
+    }
     probability *= (0.5 + effectiveVirality);
     
-    // Température de l'info (info froide = moins de transmission)
+    // Température de l'info
     probability *= (0.3 + this.info.heat * 0.7);
     
-    // Distance (plus proche = beaucoup plus probable)
+    // Distance
     const distanceFactor = Math.pow(1 - (distance / effectiveRange), 1.5);
     probability *= distanceFactor;
     
-    // Réceptivité de la cible (TRÈS important)
+    // Réceptivité de la cible
     probability *= (0.2 + target.receptivity * 0.8);
     
-    // Scepticisme + détection de fake news
+    // === SCEPTICISME + DÉTECTION DE DÉFORMATION ===
     let skepticismFactor = 1 - target.skepticism * 0.8;
+    
+    // Les sceptiques détectent les fake news
     if (target.personality === 'skeptic' && this.info.truth < 0.5) {
-      // Les sceptiques bloquent mieux les fake news
       skepticismFactor *= (0.3 + this.info.truth * 0.7);
+    }
+    
+    // Les sceptiques détectent aussi la déformation
+    if (target.personality === 'skeptic' && distortion > 0.4) {
+      skepticismFactor *= (1 - distortion * 0.5);
     }
     probability *= skepticismFactor;
     
-    // Puissance de transmission (inclut socialness, crédibilité, conviction)
-    probability *= (0.3 + transmissionPower * 0.7);
+    // === CRÉDIBILITÉ RÉDUITE PAR DÉFORMATION ===
+    let effectiveCredibility = spreader.credibility;
+    if (distortion > 0.3) {
+      effectiveCredibility *= (1 - distortion * 0.4); // Jusqu'à -40% crédibilité
+    }
     
-    // Bonus même groupe (utilise les paramètres modifiables)
+    // Puissance de transmission avec crédibilité ajustée
+    const adjustedPower = transmissionPower * (0.5 + effectiveCredibility * 0.5);
+    probability *= (0.3 + adjustedPower * 0.7);
+    
+    // Bonus même groupe
     if (spreader.isSameGroup(target)) {
       probability *= this.sameGroupBonus;
     } else {
       probability *= this.diffGroupPenalty;
     }
     
-    // Bonus si déjà exposé (répétition)
+    // Bonus répétition
     if (target.exposures > 0) {
       probability *= (1 + target.exposures * 0.5);
     }
     
-    // Événement actif
+    // Événement
     probability *= eventMultiplier;
     
-    return Math.min(probability, 0.95); // Cap à 95%
+    return Math.min(probability, 0.95);
   }
 
   /**
@@ -519,15 +564,23 @@ export class Simulation {
     let totalConviction = 0;
     let totalDistortion = 0;
     let informedCount = 0;
+    let everInformedCount = 0; // Agents ayant été touchés au moins une fois
     
     // Compteurs par groupe
     const groupInformed = [0, 0, 0];
+    const groupEverInformed = [0, 0, 0]; // Par groupe, ayant été touchés
     const groupTotal = [0, 0, 0];
     
     for (const agent of this.agents) {
       // Compter par groupe
       if (agent.group < CONFIG.GROUP_COUNT) {
         groupTotal[agent.group]++;
+        
+        // Compter ceux qui ont été touchés au moins une fois
+        if (agent.wasEverInformed) {
+          everInformedCount++;
+          groupEverInformed[agent.group]++;
+        }
       }
       
       switch (agent.state) {
@@ -560,17 +613,22 @@ export class Simulation {
       ? Math.round((totalReached / this.agents.length) * 100) 
       : 0;
     
+    // Pourcentage basé sur ceux qui ont été touchés AU MOINS UNE FOIS
+    const percentEverReached = this.agents.length > 0
+      ? Math.round((everInformedCount / this.agents.length) * 100)
+      : 0;
+    
     // Calculer la vitesse de propagation
     this.history.push({ time: this.time, reached: totalReached });
     if (this.history.length > 60) {
       this.history.shift();
     }
     
-    // Historique complet pour graphiques
+    // Historique complet pour graphiques - utiliser percentEverReached
     if (this.time % 10 === 0) { // Échantillonner toutes les 10 frames
       this.fullHistory.push({
         time: this.time,
-        percentReached,
+        percentReached: percentEverReached, // Utiliser le % de ceux ayant été touchés
         informed,
         spreading,
         saturated,
@@ -588,28 +646,39 @@ export class Simulation {
       spreadRate = timeDiff > 0 ? reachedDiff / timeDiff : 0;
     }
     
-    // Mettre à jour les résultats d'expérience
+    // Mettre à jour les résultats d'expérience - basés sur everReached
     if (this.experimentResults.timeToFirstSpread === null && spreading > 0) {
       this.experimentResults.timeToFirstSpread = this.time;
     }
-    if (this.experimentResults.timeTo25Percent === null && percentReached >= 25) {
+    if (this.experimentResults.timeTo25Percent === null && percentEverReached >= 25) {
       this.experimentResults.timeTo25Percent = this.time;
     }
-    if (this.experimentResults.timeTo50Percent === null && percentReached >= 50) {
+    if (this.experimentResults.timeTo50Percent === null && percentEverReached >= 50) {
       this.experimentResults.timeTo50Percent = this.time;
     }
-    if (this.experimentResults.timeTo75Percent === null && percentReached >= 75) {
+    if (this.experimentResults.timeTo75Percent === null && percentEverReached >= 75) {
       this.experimentResults.timeTo75Percent = this.time;
     }
-    if (totalReached > this.experimentResults.finalReached) {
-      this.experimentResults.finalReached = totalReached;
+    
+    // Tracker le maximum de personnes ayant été touchées
+    if (everInformedCount > this.experimentResults.maxEverReached) {
+      this.experimentResults.maxEverReached = everInformedCount;
       this.experimentResults.peakReachedTime = this.time;
     }
     
-    // Pénétration par groupe
-    this.experimentResults.groupPenetration = groupTotal.map((total, i) => 
-      total > 0 ? Math.round((groupInformed[i] / total) * 100) : 0
+    // Pénétration par groupe - basée sur ceux ayant été touchés
+    const currentGroupPenetration = groupTotal.map((total, i) => 
+      total > 0 ? Math.round((groupEverInformed[i] / total) * 100) : 0
     );
+    
+    // Garder le pic par groupe
+    if (this.experimentResults.peakGroupPenetration) {
+      this.experimentResults.peakGroupPenetration = this.experimentResults.peakGroupPenetration.map((peak, i) =>
+        Math.max(peak, currentGroupPenetration[i])
+      );
+    } else {
+      this.experimentResults.peakGroupPenetration = [...currentGroupPenetration];
+    }
     
     this.stats = {
       ignorant,
@@ -619,14 +688,16 @@ export class Simulation {
       forgotten,
       totalReached,
       currentlyActive,
-      peakReached: Math.max(this.stats.peakReached || 0, totalReached),
+      everReached: everInformedCount,
+      peakReached: Math.max((this.stats && this.stats.peakReached) || 0, totalReached),
+      peakEverReached: Math.max((this.stats && this.stats.peakEverReached) || 0, everInformedCount),
       spreadRate: Math.max(0, spreadRate).toFixed(1),
-      percentReached,
+      percentReached: percentEverReached,
       infoHeat: this.info ? Math.round(this.info.heat * 100) : 0,
       infoTruth: this.info ? Math.round(this.info.truth * 100) : 50,
       infoDistortion: informedCount > 0 ? Math.round((totalDistortion / informedCount) * 100) : 0,
       avgConviction: informedCount > 0 ? Math.round((totalConviction / informedCount) * 100) : 0,
-      groupPenetration: this.experimentResults.groupPenetration,
+      groupPenetration: currentGroupPenetration,
     };
   }
 
@@ -687,5 +758,106 @@ export class Simulation {
     }
     
     return counts;
+  }
+
+  /**
+   * Générer une conclusion automatique basée sur les résultats
+   */
+  generateConclusion() {
+    const stats = this.stats;
+    const results = this.experimentResults;
+    const conclusions = [];
+    let mainConclusion = '';
+    
+    // Utiliser le pourcentage de personnes AYANT ÉTÉ touchées (pas l'état actuel)
+    const percentTouched = this.agents.length > 0 
+      ? Math.round((stats.peakEverReached / this.agents.length) * 100)
+      : stats.percentReached;
+    
+    // Analyse de la propagation - basée sur le pic
+    if (percentTouched >= 80) {
+      conclusions.push(`📈 Propagation massive : ${percentTouched}% de la population a été touchée`);
+      mainConclusion = 'virale';
+    } else if (percentTouched >= 50) {
+      conclusions.push(`📊 Propagation modérée : ${percentTouched}% de la population a été touchée`);
+      mainConclusion = 'modérée';
+    } else if (percentTouched >= 25) {
+      conclusions.push(`📉 Propagation limitée : seulement ${percentTouched}% de la population touchée`);
+      mainConclusion = 'limitée';
+    } else {
+      conclusions.push(`🛑 Propagation bloquée : ${percentTouched}% de la population touchée`);
+      mainConclusion = 'bloquée';
+    }
+    
+    // Analyse de la vitesse
+    if (results.timeTo50Percent) {
+      const seconds = Math.round(results.timeTo50Percent / 60);
+      if (seconds < 15) {
+        conclusions.push(`⚡ Vitesse explosive : 50% atteint en ${seconds}s`);
+      } else if (seconds < 30) {
+        conclusions.push(`🏃 Vitesse rapide : 50% atteint en ${seconds}s`);
+      } else {
+        conclusions.push(`🐢 Vitesse lente : 50% atteint en ${seconds}s`);
+      }
+    }
+    
+    // Analyse de la déformation
+    if (stats.infoDistortion >= 50) {
+      conclusions.push('🔀 Forte déformation : l\'info s\'est beaucoup transformée en circulant');
+    } else if (stats.infoDistortion >= 25) {
+      conclusions.push('🔀 Déformation modérée : l\'info a subi quelques modifications');
+    }
+    
+    // Analyse vérité vs fake
+    if (this.info) {
+      if (this.info.truth < 0.3) {
+        if (percentTouched >= 50) {
+          conclusions.push('⚠️ Fake news efficace : une info peu fiable a largement circulé');
+        } else {
+          conclusions.push('✅ Fake news freinée : les sceptiques ont limité la désinformation');
+        }
+      } else if (this.info.truth > 0.7) {
+        if (percentTouched >= 50) {
+          conclusions.push('✅ Vérité propagée : une info fiable s\'est bien diffusée');
+        } else {
+          conclusions.push('😔 Vérité ignorée : une info fiable n\'a pas réussi à se propager');
+        }
+      }
+    }
+    
+    // Analyse des groupes - utiliser le pic par groupe
+    const peakGroups = results.peakGroupPenetration || stats.groupPenetration;
+    const groupDiff = Math.max(...peakGroups) - Math.min(...peakGroups);
+    if (groupDiff >= 40) {
+      conclusions.push('🫧 Effet bulle fort : grande différence de pénétration entre les groupes');
+    } else if (groupDiff <= 15 && percentTouched >= 30) {
+      conclusions.push('🌐 Diffusion homogène : tous les groupes touchés de façon similaire');
+    }
+    
+    // Conclusion principale formatée
+    let summary = '';
+    switch (mainConclusion) {
+      case 'virale':
+        summary = this.info && this.info.truth < 0.5 
+          ? 'Une info peu fiable mais virale peut toucher massivement une population.'
+          : 'Les conditions étaient favorables à une propagation massive.';
+        break;
+      case 'modérée':
+        summary = 'La propagation a atteint un équilibre entre diffuseurs et résistances.';
+        break;
+      case 'limitée':
+        summary = 'Des facteurs (scepticisme, bulles sociales, faible viralité) ont limité la diffusion.';
+        break;
+      case 'bloquée':
+        summary = 'La population a résisté à cette information, probablement grâce aux sceptiques.';
+        break;
+    }
+    
+    return {
+      bullets: conclusions,
+      summary,
+      mainConclusion,
+      percentTouched, // Ajouter le pourcentage réel
+    };
   }
 }
