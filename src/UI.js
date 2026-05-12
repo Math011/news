@@ -313,10 +313,13 @@ export class UI {
   showResults(stats, results, conclusion, history) {
     if (!this.elements.resultsModal) return;
     
+    // Utiliser le pourcentage de la conclusion (basé sur le pic)
+    const percentTouched = conclusion.percentTouched || stats.percentReached;
+    
     // Stats principales
     const statsHtml = `
-      <div class="result-stat ${stats.percentReached >= 50 ? 'good' : 'bad'}">
-        <div class="value">${stats.percentReached}%</div>
+      <div class="result-stat ${percentTouched >= 50 ? 'good' : 'bad'}">
+        <div class="value">${percentTouched}%</div>
         <div class="label">Population touchée</div>
       </div>
       <div class="result-stat">
